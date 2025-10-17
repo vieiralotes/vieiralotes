@@ -258,6 +258,12 @@ body {
     box-shadow: 0 0 15px rgba(255, 193, 7, 0.3);
 }
 
+/*
+    ############################################################
+    # MELHORIA PARA MOBILE - AQUI ESTÁ A CORREÇÃO #
+    ############################################################
+*/
+
 /* CARDS DE PROJEÇÃO */
 .projection-card-wrapper {
     position: relative;
@@ -277,7 +283,8 @@ body {
 }
 .projection-body {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* Por padrão, agora é UMA coluna, ideal para mobile */
+    grid-template-columns: 1fr;
     gap: 1px;
     background: rgba(255, 255, 255, 0.1);
 }
@@ -292,8 +299,20 @@ body {
 .optimistic-scenario {
     position: relative;
     overflow: hidden;
-    border-left: 1px solid rgba(255, 193, 7, 0.5);
+    /* A borda de separação foi removida por padrão */
 }
+
+/* Em telas com mais de 640px de largura (sm do Tailwind), volta a ter 2 colunas */
+@media (min-width: 640px) {
+    .projection-body {
+        grid-template-columns: 1fr 1fr;
+    }
+    .optimistic-scenario {
+        /* A borda de separação só aparece em telas maiores */
+        border-left: 1px solid rgba(255, 193, 7, 0.5);
+    }
+}
+
 
 /* DESTAQUE DO LUCRO MÁXIMO */
 .optimistic-value {
