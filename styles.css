@@ -258,11 +258,14 @@ body {
     box-shadow: 0 0 15px rgba(255, 193, 7, 0.3);
 }
 
-/*
-    ############################################################
-    # MELHORIA PARA MOBILE - AQUI ESTÁ A CORREÇÃO #
-    ############################################################
-*/
+/* CORREÇÃO DO STICKY */
+.sticky-control-panel {
+    position: -webkit-sticky; /* Adicionado para compatibilidade WebKit (iOS/Chrome Mobile) */
+    position: sticky;
+    top: 2rem; /* Distância do topo */
+    z-index: 20; /* Garante que fique acima da projeção */
+}
+
 
 /* CARDS DE PROJEÇÃO */
 .projection-card-wrapper {
@@ -299,7 +302,6 @@ body {
 .optimistic-scenario {
     position: relative;
     overflow: hidden;
-    /* A borda de separação foi removida por padrão */
 }
 
 /* Em telas com mais de 640px de largura (sm do Tailwind), volta a ter 2 colunas */

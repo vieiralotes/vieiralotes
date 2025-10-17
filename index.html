@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css"> 
 </head>
 
 <body class="bg-gray-900 text-gray-200">
@@ -81,13 +81,16 @@
             <div class="bg-card p-6 md:p-8 rounded-2xl shadow-lg reveal">
                 <h3 class="text-2xl md:text-3xl font-bold text-center mb-8 title">Simulador de Potencial</h3>
                 <div class="grid lg:grid-cols-2 gap-8">
-                    <div class="space-y-8">
+                    <div id="sticky-control-panel" class="space-y-8 sticky-control-panel"> 
                         <div>
                             <label for="lotes" class="block text-lg font-medium mb-2">Selecione a Quantidade de Lotes (5-50)</label>
                             <input type="range" id="lotes" name="lotes" min="5" max="50" value="10" class="w-full h-2 rounded-lg appearance-none cursor-pointer range-slider">
                             <div class="text-center text-3xl font-bold mt-2 text-amber-400" id="lotes-valor">10</div>
                         </div>
                         
+                        <div id="desconto-progressivo">
+                            </div>
+
                         <div class="grid grid-cols-2 gap-4">
                             <label class="payment-option">
                                 <input type="radio" name="pagamento" value="vista" class="sr-only" checked>
@@ -102,7 +105,6 @@
                         </div>
                         <div id="resumo-investimento" class="p-4 bg-gray-900/50 rounded-lg space-y-2"></div>
                     </div>
-
                     <div class="space-y-4">
                         <div id="tabela-projecao"></div>
                     </div>
@@ -128,116 +130,78 @@
         const pagamentoRadios = document.querySelectorAll('input[name="pagamento"]');
         const resumoInvestimentoDiv = document.getElementById('resumo-investimento');
         const projecaoDiv = document.getElementById('tabela-projecao');
+        const descontoDiv = document.getElementById('desconto-progressivo');
         const mainContent = document.querySelector('main');
 
         const PRECO_VISTA = 25000;
         const PRECO_FINANCIADO = 29000;
         const ENTRADA_PERCENTUAL = 0.20;
         const PARCELAS = 60;
+        
+        // NOVAS CONSTANTES PARA O DESCONTO PROGRESSIVO
+        const DESCONTO_MIN_LOTES = 25; // Começa a partir do 25º
+        const DESCONTO_POR_LOTE_ADICIONAL = 100;
+        const MAX_DESCONTO_POR_LOTE = 2000; // Novo limite
+
         const VALORIZACAO = {
             REALISTA: { ANO1: 1.60, ANUAL: 1.10 },
             OTIMISTA: { ANO1: 2.00, ANUAL: 1.15 }
         };
+        
         const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+        // FUNÇÃO DE CÁLCULO DE DESCONTO COM A NOVA REGRA
+        const calcularDesconto = (numLotes, tipoPagamento) => {
+            // O desconto só se aplica à modalidade À VISTA
+            if (tipoPagamento !== 'vista' || numLotes < DESCONTO_MIN_LOTES) {
+                return { descontoPorLote: 0, descontoTotal: 0 };
+            }
+
+            const lotesAcimaDoMinimo = numLotes - (DESCONTO_MIN_LOTES - 1); // 25 lotes = 1 de desconto, 26 = 2 de desconto, etc.
+
+            // Calcula o desconto total baseado nos lotes adicionais
+            let descontoPorLote = lotesAcimaDoMinimo * DESCONTO_POR_LOTE_ADICIONAL;
+
+            // Aplica o limite máximo
+            descontoPorLote = Math.min(descontoPorLote, MAX_DESCONTO_POR_LOTE);
+
+            const descontoTotal = descontoPorLote * numLotes;
+            
+            return { descontoPorLote, descontoTotal };
+        };
 
         const calcular = () => {
             const numLotes = parseInt(lotesSlider.value);
             const tipoPagamento = document.querySelector('input[name="pagamento"]:checked').value;
+            
+            const { descontoPorLote, descontoTotal } = calcularDesconto(numLotes, tipoPagamento);
+            
+            // Preços base
+            let precoVistaBase = PRECO_VISTA;
+            let precoFinanciadoBase = PRECO_FINANCIADO;
 
+            // Aplica o desconto apenas no modo À Vista (a função já garante isso, mas para clareza)
+            const precoVistaComDesconto = precoVistaBase - descontoPorLote; 
+            const precoFinanciadoComDesconto = precoFinanciadoBase; // Sem desconto no financiado
+            
             let investimentoTotal = 0;
-            let resumoHTML = '<h4 class="text-lg font-semibold text-center mb-2">Seu Investimento Inicial</h4>';
-            if (tipoPagamento === 'vista') {
-                investimentoTotal = numLotes * PRECO_VISTA;
-                resumoHTML += `<div class="flex justify-between items-center"><span class="text-gray-400">Total:</span><span class="text-xl font-bold text-white">${formatCurrency(investimentoTotal)}</span></div>`;
-            } else {
-                const valorTotalFinanciado = numLotes * PRECO_FINANCIADO;
-                const entrada = valorTotalFinanciado * ENTRADA_PERCENTUAL;
-                const valorFinanciado = valorTotalFinanciado - entrada;
-                const parcelaMensal = valorFinanciado / PARCELAS;
-                investimentoTotal = valorTotalFinanciado;
-                resumoHTML += `
-                    <div class="flex justify-between text-sm"><span class="text-gray-400">Entrada (20%):</span><span class="font-bold text-white">${formatCurrency(entrada)}</span></div>
-                    <div class="flex justify-between text-sm mt-1"><span class="text-gray-400">60x de:</span><span class="font-bold text-white">${formatCurrency(parcelaMensal)}</span></div>
-                    <div class="flex justify-between text-sm mt-2 pt-2 border-t border-white/10"><span class="text-gray-400">Custo Total:</span><span class="font-bold text-lg text-white">${formatCurrency(investimentoTotal)}</span></div>
-                `;
-            }
-            resumoInvestimentoDiv.innerHTML = resumoHTML;
 
-            const valorBase = numLotes * PRECO_VISTA;
-            const prazos = [1, 5, 10];
-            let projecaoHTML = '';
-
-            prazos.forEach(anos => {
-                let valorRealista, valorOtimista;
-                if (anos === 1) {
-                    valorRealista = valorBase * VALORIZACAO.REALISTA.ANO1;
-                    valorOtimista = valorBase * VALORIZACAO.OTIMISTA.ANO1;
-                } else {
-                    valorRealista = valorBase * VALORIZACAO.REALISTA.ANO1 * Math.pow(VALORIZACAO.REALISTA.ANUAL, anos - 1);
-                    valorOtimista = valorBase * VALORIZACAO.OTIMISTA.ANO1 * Math.pow(VALORIZACAO.OTIMISTA.ANUAL, anos - 1);
-                }
-
-                const lucroOtimista = valorOtimista - investimentoTotal;
-
-                projecaoHTML += `
-                <div class="projection-card-wrapper">
-                    <div class="projection-card">
-                        <div class="projection-header">
-                            <span class="year-tag">Em ${anos} Ano${anos > 1 ? 's' : ''}</span>
+            // --- 1. Resumo do Desconto (Display) ---
+            if (descontoPorLote > 0) {
+                descontoDiv.innerHTML = `
+                    <div class="p-4 bg-yellow-900/50 rounded-lg space-y-2 border border-yellow-400/50">
+                        <h5 class="text-base font-semibold text-yellow-300">Desconto Progressivo Aplicado:</h5>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-yellow-400">Desconto por Lote:</span>
+                            <span class="font-bold text-lg text-white">${formatCurrency(descontoPorLote)}</span>
                         </div>
-                        <div class="projection-body">
-                            <div>
-                                <p class="scenario-title text-cyan-400">Projeção Sólida</p>
-                                <p class="value">${formatCurrency(valorRealista)}</p>
-                                <p class="profit">Lucro de ${formatCurrency(valorRealista - investimentoTotal)}</p>
-                            </div>
-                            <div class="optimistic-scenario">
-                                <p class="scenario-title text-amber-400">Potencial Máximo!</p>
-                                <p class="value optimistic-value">${formatCurrency(valorOtimista)}</p>
-                                <p class="profit optimistic-profit">Lucro de ${formatCurrency(lucroOtimista)}</p>
-                            </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-yellow-400">Desconto Total:</span>
+                            <span class="font-bold text-lg text-white">${formatCurrency(descontoTotal)}</span>
                         </div>
                     </div>
-                </div>
                 `;
-            });
-            projecaoDiv.innerHTML = projecaoHTML;
-        };
-
-        lotesSlider.addEventListener('input', e => {
-            lotesValor.textContent = e.target.value;
-            calcular();
-        });
-        pagamentoRadios.forEach(radio => radio.addEventListener('change', calcular));
-        
-        // --- LÓGICA DAS SEÇÕES E ANIMAÇÕES ---
-        window.showSection = (sectionId) => {
-            const targetSection = document.getElementById(`section-${sectionId}`);
-            if (targetSection) {
-                // CORREÇÃO APLICADA AQUI:
-                targetSection.classList.remove('hidden-section');
-                targetSection.classList.add('visible'); // Esta linha foi adicionada
-                
-                targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                if (sectionId === 'investir') {
-                    calcular();
-                }
-            }
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.2 });
-
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-        
-        calcular(); // Cálculo inicial
-    });
-    </script>
-</body>
-</html>
+            } else if (tipoPagamento === 'vista' && numLotes >= 5) { // Mostra aviso se estiver no modo vista, mas não atingiu o mínimo
+                 descontoDiv.innerHTML = `
+                    <div class="p-4 bg-gray-800/50 rounded-lg text-center text-sm text-gray-400">
+                        Atinja ${
