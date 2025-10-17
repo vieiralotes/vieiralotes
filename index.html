@@ -214,9 +214,15 @@
         window.showSection = (sectionId) => {
             const targetSection = document.getElementById(`section-${sectionId}`);
             if (targetSection) {
+                // CORREÇÃO APLICADA AQUI:
                 targetSection.classList.remove('hidden-section');
+                targetSection.classList.add('visible'); // Esta linha foi adicionada
+                
                 targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                if (sectionId === 'investir') calcular();
+                
+                if (sectionId === 'investir') {
+                    calcular();
+                }
             }
         };
 
